@@ -7,9 +7,11 @@ import {
 } from "firebase/storage";
 import { app } from "../firebase";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const CreateListing = () => {
   const { currentUser } = useSelector((state) => state.user);
+  const navigate = useNavigate();
   const [files, setFiles] = useState([]);
   const [formData, setFormData] = useState({
     imageUrls: [],
@@ -20,7 +22,7 @@ const CreateListing = () => {
     bedrooms: 1,
     bathrooms: 1,
     regularPrice: 50,
-    discountPrice: 50,
+    discountPrice: 0,
     offer: false,
     parking: false,
     furnished: false,
@@ -125,7 +127,10 @@ const CreateListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if(formData.imageUrls.length <1) return setError('You must upload at least one image')
+      if (formData.imageUrls.length < 1)
+        return setError("You must upload at least one image");
+      if (+formData.regularPrice < +formData.discountPrice)
+        return setError("Discount price must be lower than regular price");
       setLoading(true);
       setError(false);
       const res = await fetch("/api/listing/create", {
@@ -140,10 +145,12 @@ const CreateListing = () => {
       });
 
       const data = await res.json();
+      console.log(data);
       setLoading(false);
       if (data.success === false) {
         setError(data.message);
       }
+      navigate(`/listing/${data._id}`)
     } catch (error) {
       setError(error.message);
       setLoading(false);
@@ -283,22 +290,25 @@ const CreateListing = () => {
                 <span className="text-xs">($ / month)</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                className="p-3 border border-gray-300 rounded-lg"
-                type="number"
-                id="discountPrice"
-                min="50"
-                max="100000"
-                required
-                onChange={handleChange}
-                value={formData.discountPrice}
-              />
-              <div className="flex flex-col items-center">
-                <p>Discounted Price</p>
-                <span className="text-xs">($ / month)</span>
+
+            {formData.offer && (
+              <div className="flex items-center gap-2">
+                <input
+                  className="p-3 border border-gray-300 rounded-lg"
+                  type="number"
+                  id="discountPrice"
+                  min="0"
+                  max="100000"
+                  required
+                  onChange={handleChange}
+                  value={formData.discountPrice}
+                />
+                <div className="flex flex-col items-center">
+                  <p>Discounted Price</p>
+                  <span className="text-xs">($ / month)</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col flex-1 gap-4">
@@ -347,7 +357,10 @@ const CreateListing = () => {
                 </button>
               </div>
             ))}
-          <button className="p-3 bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 disabled:opacity-80">
+          <button
+            disabled={loading || uploading}
+            className="p-3 bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 disabled:opacity-80"
+          >
             {loading ? "Creating..." : "Create listing"}
           </button>
           {error && <p className="text-red-700 text-sm">{error}</p>}
