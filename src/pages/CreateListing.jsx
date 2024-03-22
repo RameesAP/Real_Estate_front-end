@@ -140,7 +140,7 @@ const CreateListing = () => {
         },
         body: JSON.stringify({
           ...formData,
-          useRef: currentUser._id,
+          userRef: currentUser._id,
         }),
       });
 
